@@ -35,12 +35,26 @@ def on_message(client, userdata, message):
     except:
         return
 
-    if message.get("state", "") == "toggle":
-        print("Got mute command")
-        Sound.mute()
+    mute = message.get("state", "")
+    volume = message.get("volume", "")
 
-    if message.get("volume", "") != "":
-        volume = message.get("volume")
+    if mute != "":
+        print("Got mute command")
+
+        if mute == "toggle":
+            Sound.mute()
+
+        elif mute == "on" or mute == "off":
+            desired_status = mute == "on"
+            current_statue = not Sound.is_muted()
+
+            if desired_status != current_statue:
+                Sound.mute()
+
+        else:
+            print("Malformed mute command: %s" % mute)
+
+    if volume != "":
         try:
             volume = int(volume)
         except:
