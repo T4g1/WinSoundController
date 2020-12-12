@@ -1,5 +1,8 @@
-import paho.mqtt.client as mqtt
 import time
+import json
+import paho.mqtt.client as mqtt
+from sound import Sound
+
 
 host = "192.168.1.13"
 port = 1883
@@ -27,17 +30,48 @@ def get_client():
 
 
 def on_message(client, userdata, message):
-    print("message received " ,str(message.payload.decode("utf-8")))
-    print("message topic=",message.topic)
-    print("message qos=",message.qos)
-    print("message retain flag=",message.retain)
+    try:
+        message = json.loads(message.payload.decode("utf-8").lower())
+    except:
+        return
+
+    if message.get("state", "") == "toggle":
+        print("Got mute command")
+        Sound.mute()
+
+    if message.get("volume", "") != "":
+        volume = message.get("volume")
+        try:
+            volume = int(volume)
+        except:
+            print("Malformed set volume command: %s".format(volume))
+            return
+
+        if volume < 1:
+            volume = 1
+        if volume > 100:
+            volume = 100
+
+        print("Got set volume command: %d" % volume)
+        Sound.volume_set(volume)
+
+    publish_status(client)
+
+
+def publish_status(client):
+    status = {
+        "state": "OFF" if Sound.is_muted() else "ON",
+        "volume": Sound.current_volume(),
+    }
+
+    print("Status: %s" % json.dumps(status))
+
+    client.publish(get_sound_topic(), json.dumps(status))
 
 
 def sound_controller():
     print("Starting sound controller")
     client = get_client()
-    client.publish(get_sound_topic(), "on")
-
     client.loop_start()
 
     try:
